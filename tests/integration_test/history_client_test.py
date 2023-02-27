@@ -1355,7 +1355,7 @@ def test_total_sessions_with_kairon_client(mock_auth, mock_mongo_processor):
 def test_delete_user_chat_history_connection_failure(mock_auth_admin, mock_mongo_processor_endpoint_not_configured,
                                                                 monkeypatch):
     response = client.delete(
-        f"/api/history/{pytest.bot}/delete/5e564fbcdcf0d5fad89e3acd?month=3",
+        f"/api/history/{pytest.bot}/delete/5e564fbcdcf0d5fad89e3acd",
         headers={"Authorization": pytest.token_type + " " + pytest.access_token},
     )
 
@@ -1380,15 +1380,13 @@ def test_delete_user_history_unmanaged_history_server(mock_auth_admin, mock_mong
 
 @responses.activate
 def test_delete_user_chat_history(mock_auth_admin, mock_mongo_processor_endpoint_not_configured, monkeypatch):
-    from_date = (datetime.utcnow() - timedelta(30)).date()
-    to_date = datetime.utcnow().date()
+    till_date = datetime.utcnow().date()
     event_url = f"{Utility.environment['events']['server_url']}/api/events/execute/{EventClass.delete_history}"
     responses.add("POST",
                   event_url,
                   json={"success": True, "message": "Event triggered successfully!"},
                   match=[responses.json_params_matcher({'bot': 'integration', 'user': 'integration@demo.com',
-                                                        'from_date': Utility.convert_date_to_string(from_date),
-                                                        'to_date': Utility.convert_date_to_string(to_date),
+                                                        'till_date': Utility.convert_date_to_string(till_date),
                                                         'sender_id': '5e564fbcdcf0d5fad89e3acd'})],
                   status=200)
 
@@ -1406,7 +1404,7 @@ def test_delete_user_chat_history(mock_auth_admin, mock_mongo_processor_endpoint
 def test_delete_user_chat_history_event_already_runnning(mock_auth_admin, mock_mongo_processor_endpoint_not_configured,
                                                                 monkeypatch):
     response = client.delete(
-        f"/api/history/{pytest.bot}/delete/5e564fbcdcf0d5fad89e3acd?month=3",
+        f"/api/history/{pytest.bot}/delete/5e564fbcdcf0d5fad89e3acd",
         headers={"Authorization": pytest.token_type + " " + pytest.access_token},
     )
 
@@ -1421,7 +1419,7 @@ def test_delete_user_chat_history_event_already_runnning(mock_auth_admin, mock_m
 
 def test_delete_bot_chat_history_failed_to_connect_event_server(mock_auth_admin, mock_mongo_processor_endpoint_not_configured):
     response = client.delete(
-        f"/api/history/{pytest.bot}/bot/delete?month=3",
+        f"/api/history/{pytest.bot}/bot/delete",
         headers={"Authorization": pytest.token_type + " " + pytest.access_token},
     )
 
@@ -1446,15 +1444,13 @@ def test_delete_bot_chat_history_unmanaged_history_server(mock_auth_admin, mock_
 
 @responses.activate
 def test_delete_bot_chat_history(mock_auth_admin, mock_mongo_processor_endpoint_not_configured, monkeypatch):
-    from_date = (datetime.utcnow() - timedelta(30)).date()
-    to_date = datetime.utcnow().date()
+    till_date = datetime.utcnow().date()
     event_url = f"{Utility.environment['events']['server_url']}/api/events/execute/{EventClass.delete_history}"
     responses.add("POST",
                   event_url,
                   json={"success": True, "message": "Event triggered successfully!"},
                   match=[responses.json_params_matcher({'bot': 'integration', 'user': 'integration@demo.com',
-                                                        'from_date': Utility.convert_date_to_string(from_date),
-                                                        'to_date': Utility.convert_date_to_string(to_date),
+                                                        'till_date': Utility.convert_date_to_string(till_date),
                                                         'sender_id': None})],
                   status=200)
 
