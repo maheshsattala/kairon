@@ -12691,7 +12691,13 @@ def test_add_channel_config_error():
     assert actual["message"] == 'Cannot edit secondary slack app. Please delete and install the app again using oAuth.'
 
 
-def test_add_bot_with_template_name():
+def test_add_bot_with_template_name(monkeypatch):
+
+    def mock_reload_model(*arge, **kwargs):
+        return None
+
+    monkeypatch.setattr(Utility, "reload_model", mock_reload_model)
+
     response = client.post(
         "/api/account/bot",
         json={"name": "hi-hello-gpt-bot", "from_template": "Hi-Hello-GPT"},
@@ -12702,6 +12708,11 @@ def test_add_bot_with_template_name():
     assert response['error_code'] == 0
     assert response['success']
     assert response['data']['bot_id']
+    bot_id = response['data']['bot_id']
+    processor = MongoProcessor()
+    actions = processor.get_actions(bot_id)
+    action_names = [action['name'] for action in actions]
+    assert set(action_names) == {'kairon_faq_action', 'google_search_action'}
 
 
 def test_add_channel_config(monkeypatch):

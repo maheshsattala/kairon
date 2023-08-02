@@ -290,6 +290,10 @@ class TestUtility:
         training_data_path = Utility.write_training_data(training_data, domain, config, story_graph, rules, http_action)
         assert os.path.exists(training_data_path)
 
+    def test_find_latest_directory_with_file_with_file_not_exist(self):
+        file_path = Utility.find_latest_directory_with_file("non_exist_file", "./models")
+        assert file_path is None
+
     def test_read_yaml(self):
         path = 'tests/testing_data/yml_training_files/actions.yml'
         content = Utility.read_yaml(path)

@@ -712,6 +712,21 @@ class Utility:
         shutil.copy(input_path, output_file_path)
 
     @staticmethod
+    def find_latest_directory_with_file(file_name: str, root_directory: str):
+        matching_directories = []
+        for dirpath, directory, filenames in os.walk(root_directory):
+            if file_name in filenames:
+                matching_directories.append(dirpath)
+
+        if not matching_directories:
+            return None
+
+        latest_directory = max(matching_directories, key=lambda d: os.path.getmtime(os.path.join(d, file_name)))
+        latest_file_path = os.path.join(latest_directory, file_name)
+        return latest_file_path
+
+
+    @staticmethod
     def initiate_apm_client_config():
         logger.debug(f'apm_enable: {Utility.environment["elasticsearch"].get("enable")}')
         if Utility.environment["elasticsearch"].get("enable"):

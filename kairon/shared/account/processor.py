@@ -79,8 +79,7 @@ class AccountProcessor:
         return bot_exists
 
     @staticmethod
-    async def add_bot_with_template(name: str, account: int, user: str, is_new_account: bool = False,
-                                    add_default_data: bool = True, template_name: str = None, **metadata):
+    async def add_bot_with_template(name: str, account: int, user: str, **metadata):
         """
         add a bot to account and apply template
 
@@ -88,18 +87,15 @@ class AccountProcessor:
         :param name: bot name
         :param account: account id
         :param user: user id
-        :param is_new_account: True if it is a new account
-        :param add_default_data: True if default data is to be added
-        :param template_name: template name
         :return: bot id
         """
         from kairon.shared.data.processor import MongoProcessor
 
-        bot = AccountProcessor.add_bot(name, account, user, is_new_account=is_new_account,
-                                       add_default_data=add_default_data, **metadata)
+        bot = AccountProcessor.add_bot(name, account, user, False, False)
         bot_id = bot['_id'].__str__()
+        template_name = metadata['metadata'].get('template_name')
         if not Utility.check_empty_string(template_name):
-            input_path = "./template/use-cases/Hi-Hello-GPT/models/20230730-084056.tar.gz"
+            input_path = Utility.find_latest_directory_with_file("20230730-084056.tar.gz", "./models")
             output_path = f"models/{bot_id}"
             processor = MongoProcessor()
             await processor.apply_template(template_name, bot_id, user)
