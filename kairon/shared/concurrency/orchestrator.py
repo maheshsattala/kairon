@@ -1,6 +1,7 @@
 from typing import Text
 
 import pykka
+from loguru import logger
 
 from kairon.exceptions import AppException
 from kairon.shared.concurrency.actors.factory import ActorFactory
@@ -18,5 +19,9 @@ class ActorOrchestrator:
             return result
         except pykka._exceptions.Timeout as e:
             raise AppException(f"Operation timed out: {e}")
+        except SystemExit as e:
+            logger.error(f"Pyscript exited: {e}")
+        except Exception as e:
+            logger.error(f"Pyscript Exception: {e}")
         finally:
             actor.actor_ref.stop()

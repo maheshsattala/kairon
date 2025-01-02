@@ -95,6 +95,8 @@ class MessageBroadcastSettings(Auditlog):
     user = StringField(required=True)
     status = BooleanField(default=True)
     timestamp = DateTimeField(default=datetime.utcnow)
+    failed_req_count = IntField(default=0)
+    successful_req_count = IntField(default=0)
 
     meta = {"indexes": [{"fields": ["bot", ("id", "bot", "status")]}]}
 

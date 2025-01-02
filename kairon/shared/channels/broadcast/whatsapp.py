@@ -1,3 +1,5 @@
+import asyncio
+import sys
 from datetime import datetime
 
 import ujson as json
@@ -11,7 +13,7 @@ from kairon.exceptions import AppException
 from kairon.shared.channels.broadcast.from_config import MessageBroadcastFromConfig
 from kairon.shared.channels.whatsapp.bsp.dialog360 import BSP360Dialog
 from kairon.shared.chat.broadcast.constants import MessageBroadcastLogType, MessageBroadcastType
-from kairon.shared.chat.broadcast.data_objects import MessageBroadcastLogs
+from kairon.shared.chat.broadcast.data_objects import MessageBroadcastLogs, MessageBroadcastSettings
 from kairon.shared.chat.broadcast.processor import MessageBroadcastProcessor
 from kairon.shared.chat.processor import ChatDataProcessor
 from kairon.shared.constants import ChannelTypes, ActorType
@@ -22,6 +24,8 @@ from mongoengine import DoesNotExist
 
 
 class WhatsappBroadcast(MessageBroadcastFromConfig):
+    MAX_FAILURE_TOLERANCE_COUNT = 3
+    BATCH_SIZE = 8
 
     def get_recipients(self, **kwargs):
         eval_log = None
@@ -56,18 +60,52 @@ class WhatsappBroadcast(MessageBroadcastFromConfig):
         timeout = self.config.get('pyscript_timeout', 60)
         channel_client = self.__get_client()
 
-        def send_msg(template_id: Text, recipient, language_code: Text = "en", components: Dict = None, namespace: Text = None):
-            response = channel_client.send_template_message(template_id, recipient, language_code, components, namespace)
+        async def send_msg_async(template_id: Text, recipient, language_code: Text = "en", components: Dict = None,
+                                 namespace: Text = None):
+            status_flag, status_code, response = await channel_client.send_template_message_async(template_id,
+                                                                                                  recipient,
+                                                                                                  language_code,
+                                                                                                  components,
+                                                                                                  namespace)
             status = "Failed" if response.get("error") else "Success"
+
+            broadcast_settings = MessageBroadcastSettings.objects(id=self.event_id, bot=self.bot).first()
+            if status_flag:
+                broadcast_settings.successful_req_count += 1
+            else:
+                broadcast_settings.failed_req_count += 1
+                if broadcast_settings.failed_req_count >= WhatsappBroadcast.MAX_FAILURE_TOLERANCE_COUNT:
+                    raise SystemExit("Max individual broadcast failure limit reached!")
+            broadcast_settings.save()
 
             MessageBroadcastProcessor.add_event_log(
                 self.bot, MessageBroadcastLogType.send.value, self.reference_id, api_response=response,
                 status=status, recipient=recipient, template_params=components,
                 event_id=self.event_id, template_name=template_id, language_code=language_code, namespace=namespace,
-                retry_count=0
+                retry_count=0, status_code=status_code
             )
 
             return response
+
+        async def send_msg(template_id: Text, recipient, language_code: Text = "en",
+                           components: Dict = None, namespace: Text = None):
+            if isinstance(recipient, str):
+                return asyncio.run(send_msg_async(template_id, recipient, language_code, components, namespace))
+            elif isinstance(recipient, list):
+                num_recipients = len(recipient)
+                is_components_list = isinstance(components[0], list)
+                for i in range(0, num_recipients, WhatsappBroadcast.BATCH_SIZE):
+                    start_index = i
+                    end_index = min(i+WhatsappBroadcast.BATCH_SIZE, num_recipients)
+                    tasks = []
+                    if is_components_list:
+                        tasks = [send_msg_async(template_id, recipient[ind], language_code, components[ind], namespace)
+                                 for ind in range(start_index, end_index)]
+                    else:
+                        tasks = [send_msg_async(template_id, recipient[ind], language_code, components, namespace)
+                                 for ind in range(start_index, end_index)]
+                    await asyncio.gather(*tasks)
+
 
         def log(**kwargs):
             MessageBroadcastProcessor.add_event_log(
