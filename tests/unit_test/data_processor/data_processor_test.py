@@ -137,7 +137,7 @@ class TestMongoProcessor:
             return nlu, story_graph, domain, config, http_actions, multiflow_stories, bot_content, chat_client_config
 
         return _read_and_get_data
-    
+
     @pytest.fixture()
     def mock_collection_data(self):
         CollectionData(
@@ -177,8 +177,8 @@ class TestMongoProcessor:
             }
         ).save()
         CollectionData(
-            bot="test_bot", 
-            user="test_user_1", 
+            bot="test_bot",
+            user="test_user_1",
             collection_name="crop_details",
             data={
                 "name": "Mahesh",
